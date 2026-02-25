@@ -1,4 +1,4 @@
-annotation_task_name: "hindi_alignment"
+annotation_task_name: "hindi_alignment_v2"
 task_dir: "."
 output_annotation_dir: "annotation_output/"
 data_files:
@@ -8,28 +8,26 @@ item_properties:
   id_key: "id"
   text_key: "hindi_text"
 
-# Use the 'instance_display' section for modern POTATO versions to ensure visibility
 instance_display:
   fields:
     - key: "hindi_text"
       label: "Hindi Sentence"
       type: "text"
-
-# The html_layout is used as a fallback or for custom styling
+# Update this section in your config.yaml
 html_layout: |
-  <div style="padding: 20px; font-family: 'Arial Unicode MS', sans-serif;">
-    <h3 style="color: #666;">Hindi Sentence:</h3>
-    <div style="font-size: 2em; background: #f9f9f9; padding: 20px; border-radius: 8px; border: 1px solid #ddd; line-height: 1.5;">
-      {{hindi_text}}
+  <div style="padding: 10px; font-family: sans-serif;">
+    <div style="background: #f0f4f8; padding: 15px; border-radius: 5px;">
+      <h3 style="margin:0; color:#555;">Source Hindi:</h3>
+      <p style="font-size: 1.5em; font-weight: bold;">{{hindi_text}}</p>
+      <small>Model Confidence: {{best_score}}</small>
     </div>
   </div>
-
 annotation_schemes:
   - annotation_type: "radio"
     name: "alignment_choice"
-    description: "Choose the correct English alignment:"
+    description: "Select the most accurate English translation from LaBSE:"
     labels:
-      - "This is a good phone."
-      - "The phone is expensive."
-      - "I like this device."
+      - "{{choice_1}}"
+      - "{{choice_2}}"
+      - "{{choice_3}}"
       - "No correct alignment"
