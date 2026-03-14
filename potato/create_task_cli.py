@@ -18,7 +18,7 @@ The generated configuration can be further customized by editing the YAML file.
 import json
 from collections import OrderedDict
 import os
-
+import yaml
 
 def yes_or_no(question):
     """
@@ -264,5 +264,5 @@ def create_task_cli():
                 continue
 
         with open(config_file, "wt") as f:
-            json.dump(config, f, indent=4)
+            yaml.dump(dict(config), f, default_flow_style=False, sort_keys=False)
         break

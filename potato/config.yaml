@@ -1,33 +1,49 @@
-annotation_task_name: "hindi_alignment_v2"
+annotation_task_name: "hindi_word_alignment_v4"
 task_dir: "."
 output_annotation_dir: "annotation_output/"
+
+# THIS MUST BE AT THE TOP LEVEL (FAR LEFT)
+layout_id: "layout_html"
+
+# Point to your new word-level JSONL file
 data_files:
-  - "data.jsonl"
+  - "potato_word_align.jsonl"
 
 item_properties:
   id_key: "id"
-  text_key: "hindi_text"
+  text_key: "hindi_sentence"
+  context_key: "english_sentence"
 
-instance_display:
-  fields:
-    - key: "hindi_text"
-      label: "Hindi Sentence"
-      type: "text"
-# Update this section in your config.yaml
 html_layout: |
-  <div style="padding: 10px; font-family: sans-serif;">
-    <div style="background: #f0f4f8; padding: 15px; border-radius: 5px;">
-      <h3 style="margin:0; color:#555;">Source Hindi:</h3>
-      <p style="font-size: 1.5em; font-weight: bold;">{{hindi_text}}</p>
-      <small>Model Confidence: {{best_score}}</small>
+  <div style="padding: 20px; font-family: sans-serif; max-width: 900px; margin: auto;">
+    <div style="background: #fdfdfd; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 20px; line-height: 1.6;">
+      <p><strong style="color: #555;">Hindi Sentence:</strong><br> <span style="font-size: 1.2em;">{{hindi_sentence}}</span></p>
+      <p><strong style="color: #555;">English Context:</strong><br> <i>{{english_sentence}}</i></p>
     </div>
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+    <h3 style="color: #333;">Align the words:</h3>
+    <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">Select the best English translation for each highlighted Hindi word.</p>
+    
+    {% for token_data in token_alignments %}
+    <div style="margin-bottom: 25px; border-left: 5px solid #007bff; padding: 10px 15px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-radius: 0 4px 4px 0;">
+      <span style="font-size: 1.3em; font-weight: bold; color: #007bff;">{{token_data.hindi_token}}</span>
+      <div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px;">
+        {% for cand in token_data.candidates %}
+          <label style="cursor: pointer; background: #f8f9fa; padding: 8px 12px; border-radius: 20px; border: 1px solid #dee2e6; transition: 0.2s; display: flex; align-items: center;">
+            <input type="radio" name="align_{{loop.parent.index0}}" value="{{cand.english}}" style="margin-right: 8px;">
+            <span style="font-weight: 500;">{{cand.english}}</span>
+            <span style="color: #888; font-size: 0.8em; margin-left: 5px;">({{cand.score}})</span>
+          </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
   </div>
+
 annotation_schemes:
-  - annotation_type: "radio"
-    name: "alignment_choice"
-    description: "Select the most accurate English translation from LaBSE:"
+  - annotation_type: "multiselect"
+    name: "word_alignments"
+    description: "Select the correct translation for each Hindi word."
+    displayed: false
     labels:
-      - "{{choice_1}}"
-      - "{{choice_2}}"
-      - "{{choice_3}}"
-      - "No correct alignment"
+      - "aligned"

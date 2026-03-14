@@ -29,5 +29,8 @@ def potato():
 
 
 if __name__ == '__main__':
-    # Direct script execution - start the Potato annotation server
+    import sys
+    # This automatically adds config.yaml if you forgot to type it
+    if len(sys.argv) == 1:
+        sys.argv.append('config.yaml')
     potato()
