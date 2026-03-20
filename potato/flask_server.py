@@ -1115,8 +1115,8 @@ def get_displayed_text(text):
         return text
 
     # Normalize text for consistent positioning (matches client-side normalization)
-    # Remove non-printable characters and normalize whitespace
-    text = re.sub(r'[^\x20-\x7E\n]', '', text)
+    # Remove non-printable control characters and normalize whitespace, BUT preserve Unicode characters!
+    text = re.sub(r'[\x00-\x1F\x7F]', '', text)
     text = re.sub(r'[ \t]+', ' ', text)  # Normalize horizontal whitespace only
     text = text.strip()
 

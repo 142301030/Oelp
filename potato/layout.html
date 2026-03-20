@@ -1,0 +1,28 @@
+<div style="padding: 20px; font-family: sans-serif; max-width: 950px; margin: auto;">
+  <div style="background: #fdfdfd; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+    <p><strong>Hindi Sentence:</strong> {{hindi_sentence}}</p>
+    <p style="color: #555;"><strong>English Context:</strong> {{english_sentence}}</p>
+  </div>
+
+  <hr>
+  <h3>Word Alignments:</h3>
+
+  {% for token_data in token_alignments %}
+  <div style="margin-bottom: 25px; border-left: 5px solid #007bff; padding-left: 15px; background: #fff; padding-top: 10px; padding-bottom: 10px;">
+    <span style="font-size: 1.3em; font-weight: bold; color: #333;">{{token_data.hindi_token}}</span>
+    
+    <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 10px;">
+      {% set outer_loop = loop %}
+      {% for cand in token_data.candidates %}
+        <label style="background: #f8f9fa; padding: 8px 12px; border-radius: 4px; border: 1px solid #eee; cursor: pointer; display: flex; align-items: center;">
+          <input type="radio" 
+                 name="align_{{outer_loop.index0}}" 
+                 value="{{cand.english}}" 
+                 style="margin-right: 8px;">
+          <span>{{cand.english}} <small style="color: #28a745;">({{cand.score}})</small></span>
+        </label>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
