@@ -790,6 +790,7 @@ def submit_annotation():
 
 @app.route("/register", methods=["POST"])
 def register():
+
     """
     Register a new user and initialize their user state.
 
@@ -4844,4 +4845,28 @@ def shutdown():
     logger.info('Shutting down server via /shutdown')
     func()
     return jsonify({'status': 'Server shutting down...'})
+
+# Intercept React app routes and serve appv2.html
+REACT_ROUTES = [
+    "/role-select",
+    "/user",
+    "/user/instructions",
+    "/user/upload",
+    "/user/purpose",
+    "/user/configure",
+    "/annotator",
+    "/annotator/instructions",
+    "/annotator/annotate",
+    "/annotator/done"
+]
+
+for r in REACT_ROUTES:
+    app.add_url_rule(r, endpoint=f"react_{r.replace('/', '_')}", view_func=lambda: render_template('appv2.html'))
+
+@app.before_request
+def serve_react_app():
+    path = request.path
+    if path in ["/", "/login", "/annotate"] or path in REACT_ROUTES:
+        # Avoid static files or api routes
+        return render_template('appv2.html')
 
