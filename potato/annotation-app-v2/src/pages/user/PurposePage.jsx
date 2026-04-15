@@ -18,18 +18,20 @@ export default function PurposePage() {
       <Navbar showBack backTo="/user/upload" backLabel="Upload" />
       <div className="page-container">
         <div className="step-indicator">
+          <div className="step completed"><div className="step-num">✓</div>Project Type</div>
+          <div className="step-line completed"></div>
           <div className="step completed"><div className="step-num">✓</div>Instructions</div>
           <div className="step-line completed"></div>
           <div className="step completed"><div className="step-num">✓</div>Upload</div>
           <div className="step-line completed"></div>
-          <div className="step active"><div className="step-num">3</div>Purpose</div>
+          <div className="step active"><div className="step-num">4</div>Purpose</div>
           <div className="step-line"></div>
-          <div className="step"><div className="step-num">4</div>Configure</div>
+          <div className="step"><div className="step-num">5</div>Configure</div>
         </div>
         <div className="card">
           <div className="card-header" style={{ background: '#ede9fe' }}>
             <span>🎯</span> Annotation Purpose
-            <span className="badge badge-primary" style={{ marginLeft: 'auto' }}>Step 3 of 4</span>
+            <span className="badge badge-primary" style={{ marginLeft: 'auto' }}>Step 4 of 5</span>
           </div>
           <div className="card-body">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 24 }}>

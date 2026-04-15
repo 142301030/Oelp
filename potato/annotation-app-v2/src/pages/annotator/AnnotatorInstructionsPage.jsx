@@ -1,12 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import Navbar from '../../components/Navbar';
 
 export default function AnnotatorInstructionsPage() {
-  const { state } = useApp();
+  const { state, actions } = useApp();
   const navigate  = useNavigate();
-  const hasData   = !!state.annotatorData?.length;
+  const [error, setError] = useState(null);
+
+  // Auto-load project data if we have a currentProjectId context
+  useEffect(() => {
+    if (state.currentProjectId && !state.annotatorData) {
+      const proj = (state.projects || []).find(p => p.id === state.currentProjectId);
+      if (proj) {
+        actions.loadProjectData(state.currentProjectId);
+        // Mark as in-progress when annotator starts instructions
+        actions.updateProject(state.currentProjectId, { status: 'in-progress' });
+      } else {
+        setError('The project link appears to be invalid or the project has been deleted.');
+      }
+    }
+  // eslint-disable-next-line
+  }, [state.currentProjectId]);
+
+  const hasData = !!state.annotatorData?.length;
+  const canContinue = hasData && !error;
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
@@ -82,7 +100,13 @@ export default function AnnotatorInstructionsPage() {
               </div>
             </section>
 
-            {!hasData && (
+            {error && (
+              <div className="alert alert-error">
+                ⚠️ {error}
+              </div>
+            )}
+
+            {!hasData && !error && (
               <div className="alert alert-warning">
                 ⚠️ No dataset loaded. Ask an Uploader to activate a task first, or{' '}
                 <button style={{ background: 'none', border: 'none', color: '#92400e', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600 }}
@@ -92,7 +116,7 @@ export default function AnnotatorInstructionsPage() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button className="btn btn-secondary" onClick={() => navigate('/role-select')}>← Change Role</button>
-              <button className="btn btn-success btn-lg" onClick={() => navigate('/annotator/annotate')} disabled={!hasData}>
+              <button className="btn btn-success btn-lg" onClick={() => navigate('/annotator/annotate')} disabled={!canContinue}>
                 🖊️ Start Annotating →
               </button>
             </div>

@@ -57,18 +57,26 @@ export function findTokenIndices(tokens, word) {
 
 // ── State ──────────────────────────────────────────────────────────────────────
 const initialState = {
+  // ── Existing fields (unchanged) ──
   isLoggedIn: false,
   username: '',
-  role: null,          // 'user' | 'annotator'
+  role: null,          // 'user' | 'annotator' | 'admin'
   uploadedData: null,  // normalised array
   purpose: null,
   annotatorData: null,
   sentenceIdx: 0,
-  // annotations[sentenceIdx][alignmentPairIdx] = { answer:'yes'|'no', correctedWord:'' }
-  annotations: {},
+  annotations: {},     // annotations[sIdx][pIdx] = { answer, correctedWord }
+  // ── New fields ──
+  projectType: null,         // 'word-alignment' | 'ner'
+  language: null,            // 'hindi' | 'malayalam'
+  prolificPid: null,         // Prolific participant ID (auto-auth)
+  completionCode: 'C1DEMO', // Prolific completion code (overridable via URL)
+  currentProjectId: null,   // project currently being annotated
+  projects: [],              // [{ id, name, type, language, status, createdBy, createdAt, sentenceCount, annotationResult }]
 };
 
 const ACTIONS = {
+  // Existing
   LOGIN: 'LOGIN', LOGOUT: 'LOGOUT',
   SET_ROLE: 'SET_ROLE',
   SET_UPLOADED: 'SET_UPLOADED',
@@ -77,17 +85,53 @@ const ACTIONS = {
   SET_SENTENCE: 'SET_SENTENCE',
   SET_PAIR_ANSWER: 'SET_PAIR_ANSWER',
   RESET: 'RESET',
+  // New
+  SET_PROJECT_TYPE: 'SET_PROJECT_TYPE',
+  SET_LANGUAGE: 'SET_LANGUAGE',
+  SET_PROLIFIC_PID: 'SET_PROLIFIC_PID',
+  SET_COMPLETION_CODE: 'SET_COMPLETION_CODE',
+  SET_CURRENT_PROJECT_ID: 'SET_CURRENT_PROJECT_ID',
+  ADD_PROJECT: 'ADD_PROJECT',
+  UPDATE_PROJECT: 'UPDATE_PROJECT',
+  LOAD_PROJECT_DATA: 'LOAD_PROJECT_DATA',
 };
+
+function generateProjectId() {
+  return `proj_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
 
 function reducer(state, { type, payload }) {
   switch (type) {
+    // ── Existing cases (logic unchanged) ──────────────────────────────────────
     case ACTIONS.LOGIN:  return { ...state, isLoggedIn: true, username: payload };
-    case ACTIONS.LOGOUT: return { ...initialState };
+    case ACTIONS.LOGOUT: return { ...initialState, projects: state.projects }; // keep project history on logout
     case ACTIONS.SET_ROLE: return { ...state, role: payload };
     case ACTIONS.SET_UPLOADED: return { ...state, uploadedData: payload };
     case ACTIONS.SET_PURPOSE: return { ...state, purpose: payload };
-    case ACTIONS.SET_ANNOTATOR_DATA:
-      return { ...state, annotatorData: payload, annotations: {}, sentenceIdx: 0 };
+    case ACTIONS.SET_ANNOTATOR_DATA: {
+      // Auto-create a project record when user activates a task
+      const newProj = {
+        id: generateProjectId(),
+        name: `Task ${(state.projects || []).length + 1}`,
+        type: state.projectType || 'word-alignment',
+        language: state.language || 'malayalam',
+        purpose: state.purpose,
+        status: 'uploaded',     // improvement #2: status field
+        createdBy: state.username,
+        createdAt: new Date().toISOString(),
+        sentenceCount: payload?.length ?? 0,
+        dataset: payload,       // Store dataset in project record
+        annotationResult: null,
+      };
+      return {
+        ...state,
+        annotatorData: payload,
+        annotations: {},
+        sentenceIdx: 0,
+        currentProjectId: newProj.id,   // improvement #3: link projectId
+        projects: [...(state.projects || []), newProj],
+      };
+    }
     case ACTIONS.SET_SENTENCE: return { ...state, sentenceIdx: payload };
     case ACTIONS.SET_PAIR_ANSWER: {
       const { sIdx, pIdx, answer } = payload;
@@ -100,6 +144,32 @@ function reducer(state, { type, payload }) {
       };
     }
     case ACTIONS.RESET: return { ...state, annotations: {}, sentenceIdx: 0 };
+    // ── New cases ──────────────────────────────────────────────────────────────
+    case ACTIONS.SET_PROJECT_TYPE:    return { ...state, projectType: payload };
+    case ACTIONS.SET_LANGUAGE:        return { ...state, language: payload };
+    case ACTIONS.SET_PROLIFIC_PID:    return { ...state, prolificPid: payload };
+    case ACTIONS.SET_COMPLETION_CODE: return { ...state, completionCode: payload };
+    case ACTIONS.SET_CURRENT_PROJECT_ID: return { ...state, currentProjectId: payload };
+    case ACTIONS.ADD_PROJECT: return { ...state, projects: [...(state.projects || []), payload] };
+    case ACTIONS.UPDATE_PROJECT: {
+      return {
+        ...state,
+        projects: (state.projects || []).map(p =>
+          p.id === payload.id ? { ...p, ...payload.updates } : p
+        ),
+      };
+    }
+    case ACTIONS.LOAD_PROJECT_DATA: {
+      const proj = (state.projects || []).find(p => p.id === payload);
+      if (!proj) return state;
+      return {
+        ...state,
+        currentProjectId: proj.id,
+        annotatorData: proj.dataset || state.uploadedData, // Use stored dataset if available
+        annotations: {},
+        sentenceIdx: 0,
+      };
+    }
     default: return state;
   }
 }
@@ -121,16 +191,27 @@ export function AppProvider({ children }) {
   }, [state]);
 
   const actions = {
-    login:          (u)    => dispatch({ type: ACTIONS.LOGIN, payload: u }),
-    logout:         ()     => { localStorage.removeItem('wa_app_state'); dispatch({ type: ACTIONS.LOGOUT }); },
-    setRole:        (r)    => dispatch({ type: ACTIONS.SET_ROLE, payload: r }),
-    setUploadedData:(d)    => dispatch({ type: ACTIONS.SET_UPLOADED, payload: d }),
-    setPurpose:     (p)    => dispatch({ type: ACTIONS.SET_PURPOSE, payload: p }),
+    // ── Existing actions (unchanged) ────────────────────────────────────────────
+    login:           (u)   => dispatch({ type: ACTIONS.LOGIN, payload: u }),
+    logout:          ()    => { localStorage.removeItem('wa_app_state'); dispatch({ type: ACTIONS.LOGOUT }); },
+    setRole:         (r)   => dispatch({ type: ACTIONS.SET_ROLE, payload: r }),
+    setUploadedData: (d)   => dispatch({ type: ACTIONS.SET_UPLOADED, payload: d }),
+    setPurpose:      (p)   => dispatch({ type: ACTIONS.SET_PURPOSE, payload: p }),
     setAnnotatorData:(d)   => dispatch({ type: ACTIONS.SET_ANNOTATOR_DATA, payload: d }),
-    setSentenceIdx: (i)    => dispatch({ type: ACTIONS.SET_SENTENCE, payload: i }),
-    setPairAnswer:  (sIdx, pIdx, answer) =>
+    setSentenceIdx:  (i)   => dispatch({ type: ACTIONS.SET_SENTENCE, payload: i }),
+    setPairAnswer:   (sIdx, pIdx, answer) =>
       dispatch({ type: ACTIONS.SET_PAIR_ANSWER, payload: { sIdx, pIdx, answer } }),
-    reset:          ()     => dispatch({ type: ACTIONS.RESET }),
+    reset:           ()    => dispatch({ type: ACTIONS.RESET }),
+    // ── New actions ─────────────────────────────────────────────────────────────
+    setProjectType:       (t)   => dispatch({ type: ACTIONS.SET_PROJECT_TYPE,       payload: t }),
+    setLanguage:          (l)   => dispatch({ type: ACTIONS.SET_LANGUAGE,            payload: l }),
+    setProlificPid:       (pid) => dispatch({ type: ACTIONS.SET_PROLIFIC_PID,        payload: pid }),
+    setCompletionCode:    (c)   => dispatch({ type: ACTIONS.SET_COMPLETION_CODE,     payload: c }),
+    setCurrentProjectId:  (id)  => dispatch({ type: ACTIONS.SET_CURRENT_PROJECT_ID, payload: id }),
+    addProject:           (p)   => dispatch({ type: ACTIONS.ADD_PROJECT,             payload: p }),
+    updateProject:        (id, updates) =>
+      dispatch({ type: ACTIONS.UPDATE_PROJECT, payload: { id, updates } }),
+    loadProjectData:       (id) => dispatch({ type: ACTIONS.LOAD_PROJECT_DATA, payload: id }),
   };
 
   const helpers = {

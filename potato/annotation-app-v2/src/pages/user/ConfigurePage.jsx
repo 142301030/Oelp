@@ -25,9 +25,31 @@ export default function ConfigurePage() {
           <p style={{ color: '#475569', marginBottom: 28 }}>
             <strong>{total} sentences</strong> ready for annotation.
           </p>
+          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 20, marginBottom: 28, textAlign: 'left' }}>
+            <h3 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: 8, color: '#1e293b' }}>🔗 Invite Annotators</h3>
+            <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: 12 }}>
+              Share this link with your annotators. It will take them directly to the login page for this specific project.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input 
+                className="form-control" 
+                readOnly 
+                value={`${window.location.origin}/login-annotator?projectId=${state.currentProjectId}`}
+                style={{ fontSize: '0.78rem', background: '#f8fafc' }}
+              />
+              <button 
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/login-annotator?projectId=${state.currentProjectId}`);
+                  alert('Link copied to clipboard!');
+                }}
+              >📋 Copy</button>
+            </div>
+          </div>
+
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
             <button className="btn btn-secondary" onClick={() => navigate('/role-select')}>Back to Home</button>
-            <button className="btn btn-success btn-lg" onClick={() => navigate('/annotator/instructions')}>🖊️ Start Annotating →</button>
+            <button className="btn btn-success btn-lg" onClick={() => navigate('/user/dashboard')}>📊 Go to Dashboard →</button>
           </div>
         </div>
       </div>
@@ -39,18 +61,20 @@ export default function ConfigurePage() {
       <Navbar showBack backTo="/user/purpose" backLabel="Purpose" />
       <div className="page-container">
         <div className="step-indicator">
+          <div className="step completed"><div className="step-num">✓</div>Project Type</div>
+          <div className="step-line completed"></div>
           <div className="step completed"><div className="step-num">✓</div>Instructions</div>
           <div className="step-line completed"></div>
           <div className="step completed"><div className="step-num">✓</div>Upload</div>
           <div className="step-line completed"></div>
           <div className="step completed"><div className="step-num">✓</div>Purpose</div>
           <div className="step-line completed"></div>
-          <div className="step active"><div className="step-num">4</div>Configure</div>
+          <div className="step active"><div className="step-num">5</div>Configure</div>
         </div>
         <div className="card">
           <div className="card-header" style={{ background: '#ede9fe' }}>
             <span>⚙️</span> Configure Task
-            <span className="badge badge-primary" style={{ marginLeft: 'auto' }}>Step 4 of 4</span>
+            <span className="badge badge-primary" style={{ marginLeft: 'auto' }}>Step 5 of 5</span>
           </div>
           <div className="card-body">
             <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, padding: 14, marginBottom: 20, display: 'flex', gap: 20, flexWrap: 'wrap' }}>

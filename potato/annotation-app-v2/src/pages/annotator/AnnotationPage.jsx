@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { findTokenIndices } from '../../context/AppContext';
 import Navbar from '../../components/Navbar';
+import { ReactTransliterate } from 'react-transliterate';
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 function downloadJSON(data, name) {
@@ -15,6 +16,7 @@ function downloadJSON(data, name) {
 
 // ── SentencePanel (sticky) ─────────────────────────────────────────────────────
 function SentencePanel({ sentence, hoveredPairIdx, answers }) {
+  const { state } = useApp();
   const enTokens = sentence.english_tokens || [];
   const mlTokens = sentence.target_tokens  || [];
   const pairs    = sentence.alignment       || [];
@@ -43,16 +45,18 @@ function SentencePanel({ sentence, hoveredPairIdx, answers }) {
       boxShadow: '0 2px 10px rgba(0,0,0,0.07)',
       flexShrink: 0,
       zIndex: 50,
+      maxHeight: '32vh',
+      overflowY: 'auto',
     }}>
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '14px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '10px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
 
         {/* English */}
         <div>
-          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4f46e5', display: 'inline-block' }}></span>
             English
           </div>
-          <div className={isHovering ? 'tokens-dimmed' : ''} style={{ lineHeight: 2.2, flexWrap: 'wrap', display: 'flex' }}>
+          <div className={isHovering ? 'tokens-dimmed' : ''} style={{ lineHeight: 1.6, flexWrap: 'wrap', display: 'flex', gap: 2, fontSize: '0.86rem' }}>
             {enTokens.map((tok, i) => {
               const isHl = hlEnIdx.includes(i);
               const isAns = answeredEnIdx.has(i) && !isHl;
@@ -68,13 +72,13 @@ function SentencePanel({ sentence, hoveredPairIdx, answers }) {
           </div>
         </div>
 
-        {/* Malayalam */}
+        {/* Target Language */}
         <div>
-          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#059669', display: 'inline-block' }}></span>
-            Malayalam / Target
+            {state.language === 'hindi' ? 'Hindi' : 'Malayalam'} / Target
           </div>
-          <div className={isHovering ? 'tokens-dimmed' : ''} style={{ lineHeight: 2.2, flexWrap: 'wrap', display: 'flex' }}>
+          <div className={isHovering ? 'tokens-dimmed' : ''} style={{ lineHeight: 1.6, flexWrap: 'wrap', display: 'flex', gap: 2, fontSize: '0.86rem' }}>
             {mlTokens.map((tok, i) => {
               const isHl = hlMlIdx.includes(i);
               const isAns = answeredMlIdx.has(i) && !isHl;
@@ -95,12 +99,15 @@ function SentencePanel({ sentence, hoveredPairIdx, answers }) {
       {/* Hover legend */}
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '0 20px 10px', display: 'flex', gap: 16, fontSize: '0.75rem', color: '#64748b' }}>
         <span>💡 Hover an alignment question below to highlight the word pair</span>
-        {isHovering && hovered && (
-          <span style={{ marginLeft: 'auto', fontWeight: 600, color: '#1e293b' }}>
-            Highlighting: <span style={{ background: '#fde047', padding: '1px 7px', borderRadius: 4 }}>{hovered.en_word}</span>
-            {' '}↔{' '}
-            <span className="ml" style={{ background: '#4ade80', padding: '1px 7px', borderRadius: 4 }}>{hovered.ml_word}</span>
-          </span>
+        {/* Highlighting label — only if active to save space */}
+        {hovered && (
+          <div style={{ textAlign: 'center', fontSize: '0.74rem', borderTop: '1px solid #f1f5f9', padding: '6px 0', marginTop: 4 }}>
+            Highlighting: <span style={{ background: '#fef3c7', padding: '1px 5px', borderRadius: 3, fontWeight: 700 }}>{hovered.en_word}</span>
+            <span style={{ margin: '0 6px', color: '#94a3b8' }}>↔</span>
+            <span className={state.language === 'hindi' ? 'hi' : 'ml'} style={{ background: '#dcfce7', padding: '1px 5px', borderRadius: 3, fontWeight: 700 }}>
+              {hovered.ml_word || hovered.hi_word}
+            </span>
+          </div>
         )}
       </div>
     </div>
@@ -108,24 +115,30 @@ function SentencePanel({ sentence, hoveredPairIdx, answers }) {
 }
 
 // ── AlignmentCard ──────────────────────────────────────────────────────────────
-function AlignmentCard({ pair, pairIdx, answer, onAnswer, onHoverChange, isFocused }) {
+function AlignmentCard({ pair, pairIdx, answer, onAnswer, onHoverChange, isFocused, targetTokens, language }) {
   const [correctedWord, setCorrectedWord] = useState(answer?.correctedWord ?? '');
+  const [subType, setSubType]           = useState(answer?.subType || 'manual'); // 'manual' or 'exists'
 
   // Sync corrected word into answer state when it changes
   useEffect(() => {
     if (answer?.answer === 'no') {
-      onAnswer(pairIdx, { answer: 'no', correctedWord: correctedWord.trim() });
+      onAnswer(pairIdx, { 
+        answer: 'no', 
+        correctedWord: correctedWord.trim(),
+        subType: subType 
+      });
     }
   // eslint-disable-next-line
-  }, [correctedWord]);
+  }, [correctedWord, subType]);
 
   // If answer changes from outside, sync local state
   useEffect(() => {
     setCorrectedWord(answer?.correctedWord ?? '');
+    setSubType(answer?.subType || 'manual');
   }, [answer?.answer]);
 
-  const markYes = (e) => { e.stopPropagation(); onAnswer(pairIdx, { answer: 'yes', correctedWord: '' }); };
-  const markNo  = (e) => { e.stopPropagation(); onAnswer(pairIdx, { answer: 'no',  correctedWord: '' }); };
+  const markYes = (e) => { e.stopPropagation(); onAnswer(pairIdx, { answer: 'yes' }); };
+  const markNo  = (e) => { e.stopPropagation(); onAnswer(pairIdx, { answer: 'no', subType: 'manual', correctedWord: '' }); };
 
   const isYes = answer?.answer === 'yes';
   const isNo  = answer?.answer === 'no';
@@ -143,8 +156,8 @@ function AlignmentCard({ pair, pairIdx, answer, onAnswer, onHoverChange, isFocus
           '#e2e8f0'
         }`,
         borderRadius: 12,
-        padding: '16px 18px',
-        marginBottom: 12,
+        padding: '12px 16px',
+        marginBottom: 8,
         background: isYes ? '#f0fdf4' : isNo ? '#fffbeb' : isFocused ? '#ede9fe' : '#fff',
         transition: 'all 0.18s ease',
         boxShadow: isFocused ? '0 0 0 4px rgba(79,70,229,0.12)' : isAnswered ? '0 1px 4px rgba(0,0,0,0.05)' : 'none',
@@ -177,11 +190,11 @@ function AlignmentCard({ pair, pairIdx, answer, onAnswer, onHoverChange, isFocus
               {pair.en_word}
             </span>
             <span style={{ fontSize: '1.1rem', color: '#94a3b8', fontWeight: 700 }}>↔</span>
-            <span className="ml" style={{
+            <span className={language === 'hindi' ? 'hi' : 'ml'} style={{
               padding: '4px 12px', borderRadius: 8, background: '#dcfce7',
               border: '2px solid #86efac', fontWeight: 700, fontSize: '1rem', color: '#166534',
             }}>
-              {pair.ml_word}
+              {pair.ml_word || pair.hi_word}
             </span>
           </div>
         </div>
@@ -191,7 +204,7 @@ function AlignmentCard({ pair, pairIdx, answer, onAnswer, onHoverChange, isFocus
           <button
             onClick={markYes}
             style={{
-              padding: '7px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              padding: '7px 16px', borderRadius: 8, cursor: 'pointer',
               fontWeight: 700, fontSize: '0.85rem', transition: 'all 0.15s',
               background: isYes ? '#10b981' : '#f0fdf4',
               color: isYes ? 'white' : '#059669',
@@ -202,7 +215,7 @@ function AlignmentCard({ pair, pairIdx, answer, onAnswer, onHoverChange, isFocus
           <button
             onClick={markNo}
             style={{
-              padding: '7px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              padding: '7px 16px', borderRadius: 8, cursor: 'pointer',
               fontWeight: 700, fontSize: '0.85rem', transition: 'all 0.15s',
               background: isNo ? '#f59e0b' : '#fffbeb',
               color: isNo ? 'white' : '#92400e',
@@ -213,32 +226,58 @@ function AlignmentCard({ pair, pairIdx, answer, onAnswer, onHoverChange, isFocus
         </div>
       </div>
 
-      {/* If NO — correction input */}
+      {/* If NO — choice logic */}
       {isNo && (
         <div style={{
-          background: '#fef9c3', border: '1px solid #fde68a',
-          borderRadius: 8, padding: '12px 14px', marginTop: 4,
+          background: '#fffbeb', border: '1px solid #fde68a',
+          borderRadius: 8, padding: '10px 12px', marginTop: 8,
         }}>
-          <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#92400e', display: 'block', marginBottom: 6 }}>
-            Correct Malayalam word (leave blank if no equivalent exists):
-          </label>
-          <input
-            className="form-control ml"
-            value={correctedWord}
-            onChange={e => setCorrectedWord(e.target.value)}
-            placeholder="Type the correct word…"
-            style={{ fontSize: '1rem', borderColor: '#fde68a' }}
-          />
-          {correctedWord.trim() && (
-            <div style={{ marginTop: 6, fontSize: '0.8rem', color: '#166534' }}>
-              ✓ Correction: <strong className="ml">{correctedWord.trim()}</strong>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+            <button 
+              className={`btn btn-sm ${subType === 'exists' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ fontSize: '0.73rem', padding: '3px 8px' }}
+              onClick={() => { setSubType('exists'); setCorrectedWord(''); }}
+            >🔍 In Sentence</button>
+            <button 
+              className={`btn btn-sm ${subType === 'manual' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ fontSize: '0.73rem', padding: '3px 8px' }}
+              onClick={() => { setSubType('manual'); setCorrectedWord(''); }}
+            >⌨️ Manual</button>
+          </div>
+
+          {subType === 'exists' ? (
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <select 
+                className={`form-control ${language === 'hindi' ? 'hi' : 'ml'}`}
+                style={{ fontSize: '0.9rem', height: 36 }}
+                value={correctedWord}
+                onChange={e => setCorrectedWord(e.target.value)}
+              >
+                <option value="">— Select correct word from sentence —</option>
+                {(targetTokens || []).map((t, idx) => (
+                  <option key={`${t}-${idx}`} value={t}>{t} [{idx + 1}]</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="form-group translit-container" style={{ marginBottom: 0 }}>
+              <ReactTransliterate
+                renderComponent={(props) => <input {...props} className={`form-control ${language === 'hindi' ? 'hi' : 'ml'}`} style={{ fontSize: '0.92rem', height: 36 }} />}
+                value={correctedWord}
+                onChangeText={setCorrectedWord}
+                lang={language === 'hindi' ? 'hi' : 'ml'}
+                placeholder={`Type phonetically (e.g. namaskar)...`}
+              />
             </div>
           )}
-          {!correctedWord.trim() && (
-            <div style={{ marginTop: 6, fontSize: '0.79rem', color: '#92400e' }}>
-              Leaving blank = no equivalent word
-            </div>
-          )}
+          
+          <div style={{ marginTop: 6, fontSize: '0.75rem', color: '#92400e' }}>
+            {correctedWord ? (
+              <span>✓ Correction: <strong className={language === 'hindi' ? 'hi' : 'ml'}>{correctedWord}</strong></span>
+            ) : (
+              <span>(Leave empty if no equivalent exists)</span>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -381,6 +420,8 @@ export default function AnnotationPage() {
               onAnswer={handleAnswer}
               onHoverChange={setHoveredPairIdx}
               isFocused={focusedPairIdx === pi}
+              targetTokens={sentence.target_tokens}
+              language={state.language}
             />
           ))}
 

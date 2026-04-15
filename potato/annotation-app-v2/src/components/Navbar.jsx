@@ -2,7 +2,9 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
-const ROLE_LABEL = { user: 'Uploader', annotator: 'Annotator' };
+const ROLE_LABEL = { user: 'Uploader', annotator: 'Annotator', admin: 'Admin' };
+const ROLE_LOGIN = { user: '/login-user', annotator: '/login-annotator', admin: '/login-admin' };
+
 
 export default function Navbar({ showBack, backTo, backLabel }) {
   const { state, actions } = useApp();
@@ -10,10 +12,12 @@ export default function Navbar({ showBack, backTo, backLabel }) {
 
   const handleLogout = () => {
     if (window.confirm('Logout? Progress is auto-saved.')) {
+      const loginPath = ROLE_LOGIN[state.role] || '/login-user';
       actions.logout();
-      navigate('/login');
+      navigate(loginPath);
     }
   };
+
 
   return (
     <nav style={{
@@ -46,7 +50,23 @@ export default function Navbar({ showBack, backTo, backLabel }) {
               <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{ROLE_LABEL[state.role] || state.role}</div>
             )}
           </div>
-          <button className="btn btn-danger btn-sm" onClick={handleLogout}>Logout</button>
+          <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginLeft: 10 }}>
+            {state.role === 'admin' && (
+              <button 
+                className="btn btn-secondary btn-sm" 
+                onClick={() => navigate('/admin/dashboard')}
+                style={{ background: 'transparent', border: 'none', fontWeight: 600 }}
+              >📊 Dashboard</button>
+            )}
+            {state.role === 'user' && (
+              <button 
+                className="btn btn-secondary btn-sm" 
+                onClick={() => navigate('/user/dashboard')}
+                style={{ background: 'transparent', border: 'none', fontWeight: 600, color: '#4f46e5' }}
+              >📊 My Dashboard</button>
+            )}
+            <button className="btn btn-danger btn-sm" onClick={handleLogout}>Logout</button>
+          </div>
         </div>
       )}
     </nav>
