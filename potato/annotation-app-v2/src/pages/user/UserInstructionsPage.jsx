@@ -1,53 +1,64 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useApp } from '../../context/AppContext';
 import Navbar from '../../components/Navbar';
 
-const SAMPLE_JSON = `[
-  {
-    "id": 1,
-    "english": "I love apples",
-    "target": "ഞാൻ ആപ്പിൾ ഇഷ്ടപ്പെടുന്നു",
-    "english_tokens": ["I", "love", "apples"],
-    "target_tokens": ["ഞാൻ", "ആപ്പിൾ", "ഇഷ്ടപ്പെടുന്നു"],
-    "alignment": [
-      { "en_word": "I",      "ml_word": "ഞാൻ" },
-      { "en_word": "love",   "ml_word": "ഇഷ്ടപ്പെടുന്നു" },
-      { "en_word": "apples", "ml_word": "ആപ്പിൾ" }
-    ]
+const SAMPLES = {
+  malayalam: {
+    json: `[{
+  "id": 1,
+  "english": "I love apples",
+  "target": "ഞാൻ ആപ്പിൾ ഇഷ്ടപ്പെടുന്നു",
+  "alignment": [{ "en_word": "I", "ml_word": "ഞാൻ" }]
+}]`,
+    jsonl: `{"en_sentence":"The cat sat","ml_sentence":"പൂച്ച ഇരുന്നു","alignment":[{"en_word":"cat","ml_word":"പൂച്ച"}]}`,
+    langName: 'Malayalam'
+  },
+  hindi: {
+    json: `[{
+  "id": 1,
+  "english": "I love apples",
+  "target": "मुझे सेब पसंद हैं",
+  "alignment": [{ "en_word": "apples", "ml_word": "सेब" }]
+}]`,
+    jsonl: `{"en_sentence":"The cat sat","hi_sentence":"बिल्ली बैठी थी","alignment":[{"en_word":"cat","ml_word":"बिल्ली"}]}`,
+    langName: 'Hindi'
   }
-]`;
-
-const JSONL_SAMPLE = `{"en_sentence":"The cat sat","ml_sentence":"പൂച്ച ഇരുന്നു","alignment":[{"en_word":"cat","ml_word":"പൂച്ച"}]}
-{"en_sentence":"I love you","ml_sentence":"ഞാൻ നിന്നെ സ്നേഹിക്കുന്നു","alignment":[{"en_word":"love","ml_word":"സ്നേഹിക്കുന്നു"}]}`;
+};
 
 export default function UserInstructionsPage() {
+  const { state } = useApp();
   const navigate = useNavigate();
+  
+  const currentLang = state.language || 'malayalam';
+  const sampleData = SAMPLES[currentLang];
 
   const downloadSample = () => {
-    const blob = new Blob([SAMPLE_JSON], { type: 'application/json' });
+    const blob = new Blob([sampleData.json], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
-    a.href = url; a.download = 'sample_alignment.json'; a.click();
+    a.href = url; a.download = `sample_${currentLang}.json`; a.click();
     URL.revokeObjectURL(url);
   };
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
-      <Navbar showBack backTo="/role-select" backLabel="Change Role" />
+      <Navbar showBack backTo="/user/project-selection" backLabel="Selection" />
       <div className="page-container">
         <div className="step-indicator">
-          <div className="step active"><div className="step-num">1</div>Instructions</div>
+          <div className="step completed"><div className="step-num">✓</div>Project Type</div>
+          <div className="step-line completed"></div>
+          <div className="step active"><div className="step-num">2</div>Instructions</div>
           <div className="step-line"></div>
-          <div className="step"><div className="step-num">2</div>Upload</div>
+          <div className="step"><div className="step-num">3</div>Upload</div>
           <div className="step-line"></div>
-          <div className="step"><div className="step-num">3</div>Purpose</div>
+          <div className="step"><div className="step-num">4</div>Purpose</div>
           <div className="step-line"></div>
-          <div className="step"><div className="step-num">4</div>Configure</div>
+          <div className="step"><div className="step-num">5</div>Configure</div>
         </div>
         <div className="card">
           <div className="card-header" style={{ background: '#ede9fe' }}>
-            <span style={{ fontSize: 18 }}>📋</span> Upload Instructions
-            <span className="badge badge-primary" style={{ marginLeft: 'auto' }}>Step 1 of 4</span>
+            <span style={{ fontSize: 18 }}>📋</span> {sampleData.langName} Upload Instructions
+            <span className="badge badge-primary" style={{ marginLeft: 'auto' }}>Step 2 of 5</span>
           </div>
           <div className="card-body">
             <section style={{ marginBottom: 24 }}>
@@ -62,12 +73,12 @@ export default function UserInstructionsPage() {
             <section style={{ marginBottom: 24 }}>
               <h3 style={{ fontWeight: 700, color: '#4f46e5', marginBottom: 10 }}>📁 Supported Formats</h3>
               <div style={{ marginBottom: 14 }}>
-                <p style={{ fontWeight: 600, fontSize: '0.87rem', marginBottom: 6 }}>Format 1 — JSON Array</p>
-                <pre className="code-block">{SAMPLE_JSON}</pre>
+                <p style={{ fontWeight: 600, fontSize: '0.87rem', marginBottom: 6 }}>Format 1 — JSON Array ({sampleData.langName})</p>
+                <pre className="code-block">{sampleData.json}</pre>
               </div>
               <div>
-                <p style={{ fontWeight: 600, fontSize: '0.87rem', marginBottom: 6 }}>Format 2 — JSONL (one JSON per line) <span className="badge badge-success" style={{ fontSize:'0.7rem' }}>Your uploaded file</span></p>
-                <pre className="code-block">{JSONL_SAMPLE}</pre>
+                <p style={{ fontWeight: 600, fontSize: '0.87rem', marginBottom: 6 }}>Format 2 — JSONL (one JSON per line)</p>
+                <pre className="code-block">{sampleData.jsonl}</pre>
               </div>
             </section>
             <hr className="divider" />
@@ -88,7 +99,7 @@ export default function UserInstructionsPage() {
               ))}
             </section>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button className="btn btn-secondary" onClick={downloadSample}>⬇️ Sample JSON</button>
+              <button className="btn btn-secondary" onClick={() => navigate('/user/project-selection')}>← Back</button>
               <button className="btn btn-primary btn-lg" onClick={() => navigate('/user/upload')}>Continue to Upload →</button>
             </div>
           </div>

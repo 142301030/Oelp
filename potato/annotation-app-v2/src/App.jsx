@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 
+// Existing pages (untouched)
 import LoginPage                 from './pages/LoginPage';
 import RoleSelectionPage         from './pages/RoleSelectionPage';
 import UserInstructionsPage      from './pages/user/UserInstructionsPage';
@@ -12,40 +13,77 @@ import AnnotatorInstructionsPage from './pages/annotator/AnnotatorInstructionsPa
 import AnnotationPage            from './pages/annotator/AnnotationPage';
 import DonePage                  from './pages/annotator/DonePage';
 
+// New pages
+import LoginUserPage             from './pages/LoginUserPage';
+import LoginAnnotatorPage        from './pages/LoginAnnotatorPage';
+import LoginAdminPage            from './pages/LoginAdminPage';
+import ProjectSelectionPage      from './pages/user/ProjectSelectionPage';
+import UserDashboard             from './pages/user/UserDashboard';
+import ProlificEntryPage         from './pages/annotator/ProlificEntryPage';
+import AdminDashboard            from './pages/admin/AdminDashboard';
+
+// ── Guards ─────────────────────────────────────────────────────────────────────
+
+/** Generic auth guard — redirects to /login-user if not logged in */
 function RequireAuth({ children }) {
   const { state } = useApp();
   const loc = useLocation();
-  if (!state.isLoggedIn) return <Navigate to="/login" state={{ from: loc }} replace />;
+  if (!state.isLoggedIn) return <Navigate to="/login-user" state={{ from: loc }} replace />;
   return children;
 }
 
+/** Role-specific guard — also checks role matches */
+function RequireRole({ role, children }) {
+  const { state } = useApp();
+  const loc = useLocation();
+  if (!state.isLoggedIn)    return <Navigate to={`/login-${role}`} state={{ from: loc }} replace />;
+  if (state.role !== role)  return <Navigate to={`/login-${role}`} replace />;
+  return children;
+}
+
+/** Data guard — redirects to upload if no dataset in context */
 function RequireData({ children }) {
   const { state } = useApp();
   if (!state.uploadedData) return <Navigate to="/user/upload" replace />;
   return children;
 }
 
+// ── Routes ─────────────────────────────────────────────────────────────────────
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login"  element={<LoginPage />} />
-      <Route path="/role-select" element={<RequireAuth><RoleSelectionPage /></RequireAuth>} />
 
-      {/* Uploader flow */}
-      <Route path="/user"              element={<Navigate to="/user/instructions" replace />} />
-      <Route path="/user/instructions" element={<RequireAuth><UserInstructionsPage /></RequireAuth>} />
-      <Route path="/user/upload"       element={<RequireAuth><UploadPage /></RequireAuth>} />
-      <Route path="/user/purpose"      element={<RequireAuth><RequireData><PurposePage /></RequireData></RequireAuth>} />
-      <Route path="/user/configure"    element={<RequireAuth><RequireData><ConfigurePage /></RequireData></RequireAuth>} />
+      {/* ── Login pages ── */}
+      <Route path="/login"           element={<LoginPage />} />          {/* kept for backward compat */}
+      <Route path="/login-user"      element={<LoginUserPage />} />
+      <Route path="/login-annotator" element={<LoginAnnotatorPage />} />
+      <Route path="/login-admin"     element={<LoginAdminPage />} />
+      <Route path="/role-select"     element={<RequireAuth><RoleSelectionPage /></RequireAuth>} />
 
-      {/* Annotator flow */}
+      {/* ── User (Uploader) flow ── */}
+      <Route path="/user"                   element={<Navigate to="/user/dashboard" replace />} />
+      <Route path="/user/dashboard"         element={<RequireRole role="user"><UserDashboard /></RequireRole>} />
+      <Route path="/user/project-selection" element={<RequireRole role="user"><ProjectSelectionPage /></RequireRole>} />  {/* STEP 1 */}
+      <Route path="/user/instructions"      element={<RequireRole role="user"><UserInstructionsPage /></RequireRole>} />     {/* STEP 2 */}
+      <Route path="/user/upload"            element={<RequireRole role="user"><UploadPage /></RequireRole>} />               {/* STEP 3 */}
+      <Route path="/user/purpose"           element={<RequireRole role="user"><RequireData><PurposePage /></RequireData></RequireRole>} />
+      <Route path="/user/configure"         element={<RequireRole role="user"><RequireData><ConfigurePage /></RequireData></RequireRole>} />
+
+      {/* ── Annotator flow ── */}
       <Route path="/annotator"              element={<Navigate to="/annotator/instructions" replace />} />
-      <Route path="/annotator/instructions" element={<RequireAuth><AnnotatorInstructionsPage /></RequireAuth>} />
-      <Route path="/annotator/annotate"     element={<RequireAuth><AnnotationPage /></RequireAuth>} />
-      <Route path="/annotator/done"         element={<RequireAuth><DonePage /></RequireAuth>} />
+      <Route path="/annotator/prolific"     element={<ProlificEntryPage />} />                                          {/* NEW — no auth guard, auto-auth */}
+      <Route path="/annotator/instructions" element={<RequireRole role="annotator"><AnnotatorInstructionsPage /></RequireRole>} />
+      <Route path="/annotator/annotate"     element={<RequireRole role="annotator"><AnnotationPage /></RequireRole>} />
+      <Route path="/annotator/task"         element={<RequireRole role="annotator"><AnnotationPage /></RequireRole>} />  {/* alias — improvement #3 */}
+      <Route path="/annotator/done"         element={<RequireRole role="annotator"><DonePage /></RequireRole>} />
 
-      <Route path="/"  element={<Navigate to="/login" replace />} />
-      <Route path="*"  element={<Navigate to="/login" replace />} />
+      {/* ── Admin flow ── */}
+      <Route path="/admin"           element={<Navigate to="/admin/dashboard" replace />} />
+      <Route path="/admin/dashboard" element={<RequireRole role="admin"><AdminDashboard /></RequireRole>} />
+
+      {/* ── Default / 404 ── */}
+      <Route path="/"  element={<Navigate to="/login-user" replace />} />
+      <Route path="*"  element={<Navigate to="/login-user" replace />} />
     </Routes>
   );
 }
